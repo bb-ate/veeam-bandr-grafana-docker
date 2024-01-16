@@ -1,0 +1,2 @@
+0,15,30,45    *    *    *    *    /cron/veeam_backup_and_replication.sh
+# Single container cron example - runs every 15 mins

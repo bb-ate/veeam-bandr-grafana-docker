@@ -9,8 +9,8 @@
 ##      .Notes
 ##      NAME:  veeam_backup_and_replication.sh
 ##      ORIGINAL NAME: veeam_backup_and_replication.sh
-##      LASTEDIT: 31/05/2023
-##      VERSION: 1.0
+##      LASTEDIT: 16/01/2024
+##      VERSION: 1.1 - added environment variables
 ##      KEYWORDS: Veeam, , Backup, InfluxDB, Grafana
    
 ##      .Link
@@ -21,18 +21,18 @@
 # Configurations
 ##
 # Endpoint URL for InfluxDB
-veeamInfluxDBURL="http://YOURINFLUXSERVERIP" #Your InfluxDB Server, http://FQDN or https://FQDN if using SSL
-veeamInfluxDBPort="8086" #Default Port
-veeamInfluxDBBucket="veeam" # InfluxDB bucket name (not ID)
-veeamInfluxDBToken="TOKEN" # InfluxDB access token with read/write privileges for the bucket
-veeamInfluxDBOrg="ORG NAME" # InfluxDB organisation name (not ID)
+veeamInfluxDBURL="$INFLUX_URL" #Your InfluxDB Server, http://FQDN or https://FQDN if using SSL
+veeamInfluxDBPort="${INFLUX_PORT:-8086}" #Default Port 8086
+veeamInfluxDBBucket="$INFLUX_BUCKET" # InfluxDB bucket name (not ID)
+veeamInfluxDBToken="$INFLUX_TOKEN" # InfluxDB access token with read/write privileges for the bucket
+veeamInfluxDBOrg="$INFLUX_ORG" # InfluxDB organisation name (not ID)
 
 # Endpoint URL for login action
-veeamJobSessions="1000"
-veeamUsername="YOURVBRUSER"
-veeamPassword="YOURVBRPASSWORD"
-veeamBackupServer="YOURVBRAPIPORT"
-veeamBackupPort="9419" #Default Port
+veeamJobSessions="${VEEAM_JOBSESSIONS:-1000}"
+veeamUsername="$VEEAM_USER"
+veeamPassword="$VEEAM_PASSWORD"
+veeamBackupServer="$VEEAM_ADDRESS"
+veeamBackupPort="${VEEAM_PORT:-9419}" #Default Port 9419
 
 # Get the bearer token
 veeamBearer=$(curl -X POST "https://$veeamBackupServer:$veeamBackupPort/api/oauth2/token" \
@@ -61,6 +61,7 @@ veeamVBRInfoUrl=$(curl -X GET $veeamVBRURL \
     ##Comment the influx write while debugging
     echo "Writing veeam_vbr_info to InfluxDB"
     influx write \
+    --host "$veeamInfluxDBURL"\
     -t "$veeamInfluxDBToken" \
     -b "$veeamInfluxDBBucket" \
     -o "$veeamInfluxDBOrg" \
@@ -103,13 +104,14 @@ else
         creationTimeUnix=$(date -d "$veeamVBRSessionCreationTime" +"%s")
         veeamVBRSessionEndTime=$(echo "$veeamVBRSessionsUrl" | jq --raw-output ".data[$arrayjobsessions].endTime")
         endTimeUnix=$(date -d "$veeamVBRSessionEndTime" +"%s")
-        veeamBackupSessionsTimeDuration=$(($endTimeUnix-$creationTimeUnix))
+        veeamBackupSessionsTimeDuration=$(($endTimeUnix - $creationTimeUnix))
 
         #echo "veeam_vbr_sessions,veeamVBRSessionJobName=$veeamVBRSessionJobName,veeamVBR=$veeamBackupServer,veeamVBRSessiontype=$veeamVBRSessiontype,veeamVBRSessionsJobState=$veeamVBRSessionsJobState,veeamVBRSessionsJobResultMessage=$veeamVBRSessionsJobResultMessage veeamVBRSessionsJobResult=$jobStatus,veeamBackupSessionsTimeDuration=$veeamBackupSessionsTimeDuration $endTimeUnix"
         
         ##Comment the influx write while debugging
         echo "Writing veeam_vbr_sessions to InfluxDB"
         influx write \
+        --host "$veeamInfluxDBURL"\
         -t "$veeamInfluxDBToken" \
         -b "$veeamInfluxDBBucket" \
         -o "$veeamInfluxDBOrg" \
@@ -149,6 +151,7 @@ else
         ##Comment the influx write while debugging
         echo "Writing veeam_vbr_managedservers to InfluxDB"
         influx write \
+        --host "$veeamInfluxDBURL"\
         -t "$veeamInfluxDBToken" \
         -b "$veeamInfluxDBBucket" \
         -o "$veeamInfluxDBOrg" \
@@ -184,11 +187,12 @@ else
                     veeamVBRRepopath=$(echo "$veeamVBRRepositoriesUrl" | jq --raw-output ".data[$arrayrepositories].repository.path" | awk '{gsub(/([ ,])/,"\\\\&");print}')
                     veeamVBRRepoPerVM=$(echo "$veeamVBRRepositoriesUrl" | jq --raw-output ".data[$arrayrepositories].repository.advancedSettings.perVmBackup") 
                     veeamVBRRepoMaxtasks=$(echo "$veeamVBRRepositoriesUrl" | jq --raw-output ".data[$arrayrepositories].repository.maxTaskCount")
-                    #echo "veeam_vbr_repositories,veeamVBRRepoName=$veeamVBRRepoName,veeamVBRRepotype=$veeamVBRRepotype,veeamVBRMSDescription=$veeamVBRRepoDescription,veeamVBRRepopath=$veeamVBRRepopath,veeamVBRRepoPerVM=$veeamVBRRepoPerVM veeamVBRRepoMaxtasks=$veeamVBRRepoMaxtasks"
+                    echo "veeam_vbr_repositories,veeamVBRRepoName=$veeamVBRRepoName,veeamVBRRepotype=$veeamVBRRepotype,veeamVBRMSDescription=$veeamVBRRepoDescription,veeamVBRRepopath=$veeamVBRRepopath,veeamVBRRepoPerVM=$veeamVBRRepoPerVM veeamVBRRepoMaxtasks=$veeamVBRRepoMaxtasks"
                     
                     ##Comment the influx write while debugging
                     echo "Writing veeam_vbr_repositories to InfluxDB"
                     influx write \
+                    --host "$veeamInfluxDBURL"\
                     -t "$veeamInfluxDBToken" \
                     -b "$veeamInfluxDBBucket" \
                     -o "$veeamInfluxDBOrg" \
@@ -209,6 +213,7 @@ else
                     ##Comment the influx write while debugging
                     echo "Writing veeam_vbr_repositories to InfluxDB"
                     influx write \
+                    --host "$veeamInfluxDBURL"\
                     -t "$veeamInfluxDBToken" \
                     -b "$veeamInfluxDBBucket" \
                     -o "$veeamInfluxDBOrg" \
@@ -227,6 +232,7 @@ else
                     ##Comment the influx write while debugging
                     echo "Writing veeam_vbr_repositories to InfluxDB"
                     influx write \
+                    --host "$veeamInfluxDBURL"\
                     -t "$veeamInfluxDBToken" \
                     -b "$veeamInfluxDBBucket" \
                     -o "$veeamInfluxDBOrg" \
@@ -272,6 +278,7 @@ else
         ##Comment the influx write while debugging
         echo "Writing veeam_vbr_proxies to InfluxDB"
         influx write \
+        --host "$veeamInfluxDBURL"\
         -t "$veeamInfluxDBToken" \
         -b "$veeamInfluxDBBucket" \
         -o "$veeamInfluxDBOrg" \
@@ -304,7 +311,7 @@ else
         veeamVBRBobjectPlatform=$(echo "$veeamVBRBObjectsUrl" | jq --raw-output ".data[$arraybobjects].platformName")
         veeamVBRBobjectviType=$(echo "$veeamVBRBObjectsUrl" | jq --raw-output ".data[$arraybobjects].viType")
         veeamVBRBobjectObjectId=$(echo "$veeamVBRBObjectsUrl" | jq --raw-output ".data[$arraybobjects].objectId")
-        veeamVBRBobjectPath=$(echo "$veeamVBRBObjectsUrl" | jq --raw-output ".data[$arraybobjects].path")
+        veeamVBRBobjectPath=$(echo "$veeamVBRBObjectsUrl" | jq --raw-output ".data[$arraybobjects].path" | tr " " _)
         [[ ! -z "$veeamVBRBobjectPath" ]] || veeamVBRBobjectPath="None"
         veeamVBRBobjectrp=$(echo "$veeamVBRBObjectsUrl" | jq --raw-output ".data[$arraybobjects].restorePointsCount")
 
@@ -313,6 +320,7 @@ else
         ##Comment the influx write while debugging
         echo "Writing veeam_vbr_backupobjects to InfluxDB"
         influx write \
+        --host "$veeamInfluxDBURL"\
         -t "$veeamInfluxDBToken" \
         -b "$veeamInfluxDBBucket" \
         -o "$veeamInfluxDBOrg" \
