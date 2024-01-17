@@ -100,10 +100,10 @@ else
             esac
         veeamVBRSessionsJobResultMessage=$(echo "$veeamVBRSessionsUrl" | jq --raw-output ".data[$arrayjobsessions].result.message" | awk -F"." 'NR==1{print $1}' | awk '{gsub(/([ ,])/,"\\\\&");print}')
         [[ ! -z "$veeamVBRSessionsJobResultMessage" ]] || veeamVBRSessionsJobResultMessage="None"
-        veeamVBRSessionCreationTime=$(echo "$veeamVBRSessionsUrl" | jq --raw-output ".data[$arrayjobsessions].creationTime")
-        creationTimeUnix=$(date -d "$veeamVBRSessionCreationTime" +"%s")
-        veeamVBRSessionEndTime=$(echo "$veeamVBRSessionsUrl" | jq --raw-output ".data[$arrayjobsessions].endTime")
-        endTimeUnix=$(date -d "$veeamVBRSessionEndTime" +"%s")
+        veeamVBRSessionCreationTime=$(echo "$veeamVBRSessionsUrl" | jq --raw-output ".data[$arrayjobsessions].creationTime" | tr T " ")
+        creationTimeUnix=$(date -d "${veeamVBRSessionCreationTime::19}" +"%s")
+        veeamVBRSessionEndTime=$(echo "$veeamVBRSessionsUrl" | jq --raw-output ".data[$arrayjobsessions].endTime" | tr T " ")
+        endTimeUnix=$(date -d "${veeamVBRSessionEndTime::19}" +"%s")
         veeamBackupSessionsTimeDuration=$(($endTimeUnix - $creationTimeUnix))
 
         #echo "veeam_vbr_sessions,veeamVBRSessionJobName=$veeamVBRSessionJobName,veeamVBR=$veeamBackupServer,veeamVBRSessiontype=$veeamVBRSessiontype,veeamVBRSessionsJobState=$veeamVBRSessionsJobState,veeamVBRSessionsJobResultMessage=$veeamVBRSessionsJobResultMessage veeamVBRSessionsJobResult=$jobStatus,veeamBackupSessionsTimeDuration=$veeamBackupSessionsTimeDuration $endTimeUnix"
